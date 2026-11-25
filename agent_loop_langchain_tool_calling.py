@@ -1,4 +1,3 @@
-from unittest import result
 
 from dotenv import load_dotenv
 
