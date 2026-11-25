@@ -52,11 +52,20 @@ def run_agent(question: str):
     messages = [
         SystemMessage(
             content=(
-                "You are a helpful Math Agent"
-                "You have access to a tool and do the calculations.\n\n"
-                "STRICT RULES — you must follow these exactly:\n"
-
-
+                "You are a helpful Math Agent.\n"
+                "You have access to calculator tools.\n\n"
+                "STRICT RULES:\n"
+                "1. Always use tools for calculations.\n"
+                "2. Never perform calculations yourself.\n"
+                "3. Never invent tool results.\n"
+                "4. For dependent calculations, execute one "
+                "operation at a time.\n"
+                "5. Use the previous tool result for the next "
+                "calculation when required.\n"
+                "6. If a tool returns an error, explain it "
+                "to the user.\n"
+                "7. Return the final answer after completing "
+                "all calculations."
             )
         ),
         HumanMessage(content=question),
@@ -69,21 +78,26 @@ def run_agent(question: str):
             print(f"Final answer : {ai_messages.content}")
             return ai_messages.content
 
-        tool_call = tool_calls[0]
-        tool_name = tool_call.get("name")
-        tool_args = tool_call.get("args", {})
-        tool_call_id = tool_call.get("id")
-        print(f"Tool selected {tool_name} with args {tool_args}")
-        tool_to_use = tools_dict.get(tool_name)
-        if tool_to_use is None:
-            return ValueError(f"Tool {tool_name} not found")
-
-        observation = tool_to_use.invoke(tool_args)
-        print(f"Observation : {observation}")
         messages.append(ai_messages)
-        messages.append(
-            ToolMessage(content=str(observation), tool_call_id=tool_call_id)
-        )
+
+        for tool_call in tool_calls:
+            tool_name = tool_call.get("name")
+            tool_args = tool_call.get("args", {})
+            tool_call_id = tool_call.get("id")
+            tool_to_use = tools_dict.get(tool_name)
+            try:
+                if tool_to_use is None:
+                    raise ValueError(f"Tool {tool_name} not found")
+                observation = tool_to_use.invoke(tool_args)
+            except Exception as e:
+                observation = f"Error: {e}"
+            print(f"Observation: {observation}")
+            messages.append(
+                ToolMessage(
+                    content=str(observation),
+                    tool_call_id=tool_call_id
+                )
+            )
 
     print("ERROR :Reached MAX Iterations without answer")
     return None
@@ -91,4 +105,4 @@ def run_agent(question: str):
 
 if __name__ == "__main__":
     print(f" >> Hello langchain Agent")
-    result = run_agent("what is the add of 1 + 2?")
+    result = run_agent("Add 10 and 20, and multiply 5 by 6.")
